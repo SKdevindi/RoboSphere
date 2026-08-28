@@ -17,9 +17,24 @@ export default function Home() {
 >
   Robot Control
 </Link>
-          <div className="p-3 text-gray-400">Sensors</div>
-          <div className="p-3 text-gray-400">Activity History</div>
-          <div className="p-3 text-gray-400">Settings</div>
+          <Link
+  href="/sensors"
+  className="block p-3 text-gray-400 hover:text-white"
+>
+  Sensors
+</Link>
+          <Link
+  href="/activity-history"
+  className="block p-3 text-gray-400 hover:text-white"
+>
+  Activity History
+</Link>
+         <Link
+  href="/settings"
+  className="block p-3 text-gray-400 hover:text-white"
+>
+  Settings
+</Link>
         </nav>
       </aside>
 
