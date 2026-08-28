@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#080D18] text-white flex">
@@ -10,7 +11,12 @@ export default function Home() {
             Dashboard
           </div>
 
-          <div className="p-3 text-gray-400">Robot Control</div>
+          <Link
+  href="/robot-control"
+  className="block p-3 text-gray-400 hover:text-white"
+>
+  Robot Control
+</Link>
           <div className="p-3 text-gray-400">Sensors</div>
           <div className="p-3 text-gray-400">Activity History</div>
           <div className="p-3 text-gray-400">Settings</div>
@@ -52,43 +58,36 @@ export default function Home() {
             </div>
           </div>
         </div>
-{/* Robot Statistics */}
-<div className="mt-6 grid grid-cols-4 gap-6">
 
-  {/* Battery */}
+<div className="mt-6 grid grid-cols-4 gap-6">
   <div className="rounded-xl bg-[#121B2E] p-5">
     <p className="text-sm text-gray-400">Battery</p>
     <h3 className="mt-2 text-2xl font-bold">🔋 87%</h3>
     <p className="mt-2 text-sm text-green-400">Normal</p>
   </div>
 
-  {/* Speed */}
   <div className="rounded-xl bg-[#121B2E] p-5">
     <p className="text-sm text-gray-400">Speed</p>
     <h3 className="mt-2 text-2xl font-bold">⚡ 1.2 m/s</h3>
     <p className="mt-2 text-sm text-green-400">Stable</p>
   </div>
 
-  {/* Distance */}
   <div className="rounded-xl bg-[#121B2E] p-5">
     <p className="text-sm text-gray-400">Distance</p>
     <h3 className="mt-2 text-2xl font-bold">📡 45 cm</h3>
     <p className="mt-2 text-sm text-green-400">Clear</p>
   </div>
 
-  {/* Temperature */}
   <div className="rounded-xl bg-[#121B2E] p-5">
     <p className="text-sm text-gray-400">Temperature</p>
     <h3 className="mt-2 text-2xl font-bold">🌡️ 36°C</h3>
     <p className="mt-2 text-sm text-green-400">Normal</p>
   </div>
-
 </div>
 
 
 
-
-
+        
       </section>
     </main>
   );
