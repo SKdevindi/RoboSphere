@@ -55,6 +55,20 @@ const RobotContext =
 
 const API_URL = "http://127.0.0.1:8000";
 
+const getAuthHeaders = () => {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("robosphere_token")
+      : null;
+
+  return {
+    "Content-Type": "application/json",
+    ...(token
+      ? { Authorization: `Bearer ${token}` }
+      : {}),
+  };
+};
+
 export function RobotProvider({
   children,
 }: {
@@ -135,7 +149,10 @@ export function RobotProvider({
   const refreshRobot = async () => {
     try {
       const response = await fetch(
-        `${API_URL}/api/robot`
+        `${API_URL}/api/robot`,
+        {
+          headers: getAuthHeaders(),
+        }
       );
 
       if (!response.ok) {
@@ -163,10 +180,7 @@ export function RobotProvider({
         `${API_URL}/api/activities`,
         {
           method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             action,
           }),
@@ -195,7 +209,10 @@ export function RobotProvider({
   const refreshActivities = async () => {
     try {
       const response = await fetch(
-        `${API_URL}/api/activities`
+        `${API_URL}/api/activities`,
+        {
+          headers: getAuthHeaders(),
+        }
       );
 
       if (!response.ok) {
@@ -259,9 +276,13 @@ export function RobotProvider({
   };
 
   useEffect(() => {
+  const token = localStorage.getItem("robosphere_token");
+
+  if (token) {
     refreshRobot();
     refreshActivities();
-  }, []);
+  }
+}, []);
 
   const moveRobot = async (
     direction: string,
@@ -272,10 +293,7 @@ export function RobotProvider({
         `${API_URL}/api/robot/move`,
         {
           method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             direction,
           }),
@@ -343,6 +361,7 @@ export function RobotProvider({
         `${API_URL}/api/robot/stop`,
         {
           method: "POST",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -387,6 +406,7 @@ export function RobotProvider({
         `${API_URL}/api/activities`,
         {
           method: "DELETE",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -416,10 +436,7 @@ export function RobotProvider({
           `${API_URL}/api/robot/settings`,
           {
             method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
               name: robotName,
               robot_id: robotId,

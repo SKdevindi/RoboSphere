@@ -1,17 +1,98 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
-import { useRobot } from "../context/RobotContext";
+
+type SensorData = {
+  battery: number;
+  temperature: number;
+  speed: number;
+  distance: number;
+  obstacle_detected: boolean;
+  obstacle_detection_enabled: boolean;
+  status: string;
+  x: number;
+  y: number;
+};
+
+const API_URL = "http://127.0.0.1:8000";
 
 export default function SensorsPage() {
-  const {
-    battery,
-    speed,
-    distance,
-    temperature,
-    refreshSensors,
-  } = useRobot();
+  const router = useRouter();
+
+  const [sensorData, setSensorData] = useState<SensorData>({
+    battery: 100,
+    temperature: 36,
+    speed: 0,
+    distance: 0,
+    obstacle_detected: false,
+    obstacle_detection_enabled: true,
+    status: "Stopped",
+    x: 20,
+    y: 50,
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const fetchSensors = async () => {
+    try {
+      setLoading(true);
+      setError(false);
+
+      // Get JWT token saved after login
+      const token = localStorage.getItem("robosphere_token");
+
+      // If there is no token, send user to login
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/robot/sensors`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Token invalid or expired
+      if (response.status === 401) {
+        localStorage.removeItem("robosphere_token");
+        localStorage.removeItem("robosphere_user");
+
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to load sensor data");
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setSensorData(data);
+    } catch (error) {
+      console.error("Sensor error:", error);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSensors();
+  }, []);
 
   return (
     <main className="flex min-h-screen bg-[#080D18] text-white">
@@ -38,6 +119,13 @@ export default function SensorsPage() {
           </Link>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-red-400">
+            Failed to load sensor data. Please check the backend connection.
+          </div>
+        )}
+
         {/* Sensor Cards */}
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           {/* Distance */}
@@ -47,7 +135,7 @@ export default function SensorsPage() {
             </p>
 
             <h2 className="mt-3 text-3xl font-bold">
-              📡 {distance}
+              📡 {sensorData.distance}
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
@@ -56,13 +144,13 @@ export default function SensorsPage() {
 
             <p
               className={`mt-4 text-sm font-semibold ${
-                distance < 15
+                sensorData.obstacle_detected
                   ? "text-yellow-400"
                   : "text-green-400"
               }`}
             >
-              {distance < 15
-                ? "⚠ Obstacle Near"
+              {sensorData.obstacle_detected
+                ? "⚠ Obstacle Detected"
                 : "● Clear"}
             </p>
           </div>
@@ -74,17 +162,17 @@ export default function SensorsPage() {
             </p>
 
             <h2 className="mt-3 text-3xl font-bold">
-              🌡️ {temperature}°C
+              🌡️ {sensorData.temperature}°C
             </h2>
 
             <p
               className={`mt-4 text-sm font-semibold ${
-                temperature >= 38
+                sensorData.temperature >= 38
                   ? "text-yellow-400"
                   : "text-green-400"
               }`}
             >
-              {temperature >= 38
+              {sensorData.temperature >= 38
                 ? "⚠ High"
                 : "● Normal"}
             </p>
@@ -97,17 +185,17 @@ export default function SensorsPage() {
             </p>
 
             <h2 className="mt-3 text-3xl font-bold">
-              🔋 {battery}%
+              🔋 {sensorData.battery}%
             </h2>
 
             <p
               className={`mt-4 text-sm font-semibold ${
-                battery <= 20
+                sensorData.battery <= 20
                   ? "text-yellow-400"
                   : "text-green-400"
               }`}
             >
-              {battery <= 20
+              {sensorData.battery <= 20
                 ? "⚠ Low Battery"
                 : "● Normal"}
             </p>
@@ -120,20 +208,89 @@ export default function SensorsPage() {
             </p>
 
             <h2 className="mt-3 text-3xl font-bold">
-              ⚡ {speed} m/s
+              ⚡ {sensorData.speed} m/s
             </h2>
 
             <p
               className={`mt-4 text-sm font-semibold ${
-                speed === 0
+                sensorData.speed === 0
                   ? "text-gray-400"
                   : "text-green-400"
               }`}
             >
-              {speed === 0
+              {sensorData.speed === 0
                 ? "● Stopped"
                 : "● Moving"}
             </p>
+          </div>
+        </div>
+
+        {/* Robot Information */}
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          {/* Position */}
+          <div className="rounded-2xl border border-gray-800 bg-[#121B2E] p-6">
+            <h2 className="text-xl font-semibold">
+              Robot Position
+            </h2>
+
+            <div className="mt-5 space-y-4">
+              <div className="flex justify-between border-b border-gray-800 pb-3">
+                <span className="text-gray-400">
+                  X Position
+                </span>
+
+                <span className="font-semibold">
+                  {sensorData.x}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-gray-400">
+                  Y Position
+                </span>
+
+                <span className="font-semibold">
+                  {sensorData.y}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Robot Status */}
+          <div className="rounded-2xl border border-gray-800 bg-[#121B2E] p-6">
+            <h2 className="text-xl font-semibold">
+              Robot Status
+            </h2>
+
+            <div className="mt-5 space-y-4">
+              <div className="flex justify-between border-b border-gray-800 pb-3">
+                <span className="text-gray-400">
+                  Status
+                </span>
+
+                <span className="font-semibold text-blue-400">
+                  {sensorData.status}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-gray-400">
+                  Obstacle Protection
+                </span>
+
+                <span
+                  className={`font-semibold ${
+                    sensorData.obstacle_detection_enabled
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {sensorData.obstacle_detection_enabled
+                    ? "● Enabled"
+                    : "● Disabled"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -187,13 +344,26 @@ export default function SensorsPage() {
         </div>
 
         {/* Refresh Button */}
-        <div className="mt-8">
+        <div className="mt-8 flex items-center gap-4">
           <button
-            onClick={refreshSensors}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold transition hover:opacity-90"
+            onClick={fetchSensors}
+            disabled={loading}
+            className={`rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold transition ${
+              loading
+                ? "cursor-not-allowed opacity-50"
+                : "hover:opacity-90"
+            }`}
           >
-            Refresh Sensor Data
+            {loading
+              ? "Refreshing..."
+              : "Refresh Sensor Data"}
           </button>
+
+          {!error && !loading && (
+            <span className="text-sm text-green-400">
+              ● Connected to backend
+            </span>
+          )}
         </div>
       </section>
     </main>

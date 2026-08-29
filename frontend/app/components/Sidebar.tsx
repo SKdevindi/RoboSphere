@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const menuItems = [
     {
@@ -29,8 +30,18 @@ export default function Sidebar() {
     },
   ];
 
+  const handleLogout = () => {
+    // Remove saved login details
+    localStorage.removeItem("robosphere_token");
+    localStorage.removeItem("robosphere_user");
+
+    // Go back to login page
+    router.push("/login");
+  };
+
   return (
-    <aside className="min-h-screen w-64 bg-[#0D1424] p-6 text-white">
+    <aside className="flex min-h-screen w-64 flex-col bg-[#0D1424] p-6 text-white">
+      {/* Logo */}
       <div className="mb-10">
         <h1 className="text-2xl font-bold">
           🤖 RoboSphere
@@ -41,6 +52,7 @@ export default function Sidebar() {
         </p>
       </div>
 
+      {/* Navigation */}
       <nav className="space-y-3">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
@@ -61,6 +73,7 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Robot Status */}
       <div className="mt-10 rounded-xl bg-[#121B2E] p-4">
         <p className="text-sm text-gray-400">
           Robot Status
@@ -73,6 +86,16 @@ export default function Sidebar() {
         <p className="mt-1 text-sm text-gray-400">
           RBS-001
         </p>
+      </div>
+
+      {/* Logout */}
+      <div className="mt-auto pt-6">
+        <button
+          onClick={handleLogout}
+          className="w-full rounded-lg border border-red-500/40 bg-red-500/10 p-3 font-medium text-red-400 transition hover:bg-red-500 hover:text-white"
+        >
+          Logout
+        </button>
       </div>
     </aside>
   );

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
 import { RobotProvider } from "./context/RobotContext";
+import AuthGuard from "./components/AuthGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +32,9 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <RobotProvider>
-          {children}
+          <AuthGuard>
+            {children}
+          </AuthGuard>
         </RobotProvider>
       </body>
     </html>
