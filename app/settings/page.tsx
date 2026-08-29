@@ -21,15 +21,31 @@ export default function SettingsPage() {
   } = useRobot();
 
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleSave = () => {
-    saveSettings();
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    setError(false);
 
-    setSaved(true);
+    const success = await saveSettings();
 
-    setTimeout(() => {
-      setSaved(false);
-    }, 2000);
+    setSaving(false);
+
+    if (success) {
+      setSaved(true);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 2000);
+    } else {
+      setError(true);
+
+      setTimeout(() => {
+        setError(false);
+      }, 3000);
+    }
   };
 
   return (
@@ -381,14 +397,27 @@ export default function SettingsPage() {
         <div className="mt-8 flex items-center gap-4">
           <button
             onClick={handleSave}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-3 font-semibold transition hover:opacity-90"
+            disabled={saving}
+            className={`rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-3 font-semibold transition ${
+              saving
+                ? "cursor-not-allowed opacity-50"
+                : "hover:opacity-90"
+            }`}
           >
-            Save Settings
+            {saving
+              ? "Saving..."
+              : "Save Settings"}
           </button>
 
           {saved && (
             <div className="rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-2 text-sm text-green-400">
               ✓ Settings saved successfully
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+              ✕ Failed to save settings
             </div>
           )}
         </div>

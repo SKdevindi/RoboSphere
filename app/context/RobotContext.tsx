@@ -1,15 +1,15 @@
-
 "use client";
 
 import {
   createContext,
-  useContext,
-  useState,
   ReactNode,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 type Activity = {
-  id: number;
+  id: string;
   action: string;
   time: string;
 };
@@ -20,8 +20,8 @@ type RobotContextType = {
   battery: number;
   speed: number;
   status: string;
-  distance: number;
   temperature: number;
+  distance: number;
   activities: Activity[];
 
   robotName: string;
@@ -35,26 +35,31 @@ type RobotContextType = {
   moveLeft: () => void;
   moveRight: () => void;
   stopRobot: () => void;
-  clearActivities: () => void;
+
+  refreshRobot: () => void;
   refreshSensors: () => void;
+  refreshActivities: () => void;
+  clearActivities: () => void;
 
   setRobotName: (value: string) => void;
   setRobotId: (value: string) => void;
   setSpeedLimit: (value: number) => void;
   setObstacleDetection: (value: boolean) => void;
   setNotifications: (value: boolean) => void;
-  saveSettings: () => void;
+
+  saveSettings: () => Promise<boolean>;
 };
 
 const RobotContext =
   createContext<RobotContextType | undefined>(undefined);
+
+const API_URL = "http://127.0.0.1:8000";
 
 export function RobotProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  // Robot data
   const [x, setX] = useState(20);
   const [y, setY] = useState(50);
   const [battery, setBattery] = useState(100);
@@ -62,7 +67,6 @@ export function RobotProvider({
   const [status, setStatus] = useState("Stopped");
   const [temperature, setTemperature] = useState(36);
 
-  // Settings
   const [robotName, setRobotName] =
     useState("RoboSphere Robot");
 
@@ -72,17 +76,19 @@ export function RobotProvider({
   const [speedLimit, setSpeedLimit] =
     useState(1.2);
 
-  const [obstacleDetection, setObstacleDetection] =
-    useState(true);
+  const [
+    obstacleDetection,
+    setObstacleDetection,
+  ] = useState(true);
 
-  const [notifications, setNotifications] =
-    useState(true);
+  const [
+    notifications,
+    setNotifications,
+  ] = useState(true);
 
-  // Activity history
   const [activities, setActivities] =
     useState<Activity[]>([]);
 
-  // Obstacle
   const obstacleX = 60;
   const obstacleY = 50;
 
@@ -93,156 +99,371 @@ export function RobotProvider({
     )
   );
 
-  const addActivity = (action: string) => {
-    const newActivity: Activity = {
-      id: Date.now() + Math.random(),
-      action,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setActivities((previous) => [
-      newActivity,
-      ...previous,
-    ]);
-  };
-
-  const isObstacle = (
-    newX: number,
-    newY: number
-  ) => {
-    if (!obstacleDetection) {
-      return false;
+  const updateRobotState = (robot: any) => {
+    if (!robot) {
+      return;
     }
 
-    const distanceX = Math.abs(
-      newX - obstacleX
+    setX(robot.x ?? 20);
+    setY(robot.y ?? 50);
+    setBattery(robot.battery ?? 100);
+    setSpeed(robot.speed ?? 0);
+    setStatus(robot.status ?? "Stopped");
+    setTemperature(robot.temperature ?? 36);
+
+    setRobotName(
+      robot.name ?? "RoboSphere Robot"
     );
 
-    const distanceY = Math.abs(
-      newY - obstacleY
+    setRobotId(
+      robot.robot_id ?? "RBS-001"
     );
 
-    return (
-      distanceX < 12 &&
-      distanceY < 12
+    setSpeedLimit(
+      robot.speed_limit ?? 1.2
+    );
+
+    setObstacleDetection(
+      robot.obstacle_detection ?? true
+    );
+
+    setNotifications(
+      robot.notifications ?? true
     );
   };
 
-  const canMove = () => {
-    if (battery <= 0) {
-      setStatus("Battery Empty");
-      setSpeed(0);
-
-      addActivity(
-        "Movement failed - battery empty"
+  const refreshRobot = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/robot`
       );
 
-      return false;
-    }
+      if (!response.ok) {
+        throw new Error(
+          "Failed to get robot data"
+        );
+      }
 
-    return true;
+      const data = await response.json();
+
+      updateRobotState(data);
+    } catch (error) {
+      console.error(
+        "Robot data error:",
+        error
+      );
+    }
   };
 
-  const moveRobot = (
-    newX: number,
-    newY: number,
-    movementStatus: string,
+  const saveActivity = async (
+    action: string
+  ) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/activities`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            action,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          "Activity save failed:",
+          data
+        );
+        return;
+      }
+
+      await refreshActivities();
+    } catch (error) {
+      console.error(
+        "Activity error:",
+        error
+      );
+    }
+  };
+
+  const refreshActivities = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/activities`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to get activities"
+        );
+      }
+
+      const data = await response.json();
+
+      if (!Array.isArray(data)) {
+        console.error(
+          "Invalid activity data:",
+          data
+        );
+        return;
+      }
+
+      const formattedActivities: Activity[] =
+        data.map(
+          (
+            activity: {
+              action: string;
+              created_at?: string;
+            },
+            index: number
+          ) => {
+            const activityDate =
+              activity.created_at
+                ? new Date(
+                    activity.created_at
+                  )
+                : new Date();
+
+            return {
+              id: `${activity.created_at ?? "activity"}-${index}`,
+              action:
+                activity.action ??
+                "Unknown activity",
+              time:
+                activityDate.toLocaleTimeString(
+                  [],
+                  {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }
+                ),
+            };
+          }
+        );
+
+      setActivities(
+        formattedActivities
+      );
+    } catch (error) {
+      console.error(
+        "Activity history error:",
+        error
+      );
+    }
+  };
+
+  useEffect(() => {
+    refreshRobot();
+    refreshActivities();
+  }, []);
+
+  const moveRobot = async (
+    direction: string,
     activityMessage: string
   ) => {
-    if (!canMove()) {
-      return;
-    }
-
-    if (isObstacle(newX, newY)) {
-      setStatus("Obstacle Detected");
-      setSpeed(0);
-
-      addActivity(
-        "Obstacle detected - robot stopped"
+    try {
+      const response = await fetch(
+        `${API_URL}/api/robot/move`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            direction,
+          }),
+        }
       );
 
-      return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          "Move failed:",
+          data
+        );
+        return;
+      }
+
+      if (data.robot) {
+        updateRobotState(
+          data.robot
+        );
+
+        await saveActivity(
+          activityMessage
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Robot movement error:",
+        error
+      );
     }
-
-    setX(newX);
-    setY(newY);
-
-    setBattery((previous) =>
-      Math.max(previous - 1, 0)
-    );
-
-    setSpeed(speedLimit);
-    setStatus(movementStatus);
-
-    addActivity(activityMessage);
   };
 
   const moveUp = () => {
     moveRobot(
-      x,
-      Math.max(y - 10, 0),
-      "Moving Forward",
+      "up",
       "Robot moved forward"
     );
   };
 
   const moveDown = () => {
     moveRobot(
-      x,
-      Math.min(y + 10, 90),
-      "Moving Backward",
+      "down",
       "Robot moved backward"
     );
   };
 
   const moveLeft = () => {
     moveRobot(
-      Math.max(x - 10, 0),
-      y,
-      "Moving Left",
+      "left",
       "Robot moved left"
     );
   };
 
   const moveRight = () => {
     moveRobot(
-      Math.min(x + 10, 90),
-      y,
-      "Moving Right",
+      "right",
       "Robot moved right"
     );
   };
 
-  const stopRobot = () => {
-    setSpeed(0);
-    setStatus("Stopped");
+  const stopRobot = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/robot/stop`,
+        {
+          method: "POST",
+        }
+      );
 
-    addActivity("Robot stopped");
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          "Stop failed:",
+          data
+        );
+        return;
+      }
+
+      if (data.robot) {
+        updateRobotState(
+          data.robot
+        );
+
+        await saveActivity(
+          "Robot stopped"
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Robot stop error:",
+        error
+      );
+    }
   };
 
-  const clearActivities = () => {
-    setActivities([]);
-  };
+  const refreshSensors = async () => {
+    await refreshRobot();
 
-  const refreshSensors = () => {
-    const newTemperature =
-      Math.floor(Math.random() * 10) + 30;
-
-    setTemperature(newTemperature);
-
-    addActivity(
+    await saveActivity(
       "Sensor data refreshed"
     );
   };
 
-  const saveSettings = () => {
-    addActivity(
-      "Robot settings updated"
-    );
+  const clearActivities = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/activities`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          "Failed to clear activities:",
+          data
+        );
+        return;
+      }
+
+      setActivities([]);
+    } catch (error) {
+      console.error(
+        "Clear activity error:",
+        error
+      );
+    }
   };
+
+  const saveSettings =
+    async (): Promise<boolean> => {
+      try {
+        const response = await fetch(
+          `${API_URL}/api/robot/settings`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              name: robotName,
+              robot_id: robotId,
+              speed_limit:
+                speedLimit,
+              obstacle_detection:
+                obstacleDetection,
+              notifications,
+            }),
+          }
+        );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          console.error(
+            "Settings save failed:",
+            data
+          );
+
+          return false;
+        }
+
+        if (data.robot) {
+          updateRobotState(
+            data.robot
+          );
+        }
+
+        await saveActivity(
+          "Robot settings updated"
+        );
+
+        return true;
+      } catch (error) {
+        console.error(
+          "Settings error:",
+          error
+        );
+
+        return false;
+      }
+    };
 
   return (
     <RobotContext.Provider
@@ -252,8 +473,8 @@ export function RobotProvider({
         battery,
         speed,
         status,
-        distance,
         temperature,
+        distance,
         activities,
 
         robotName,
@@ -267,14 +488,18 @@ export function RobotProvider({
         moveLeft,
         moveRight,
         stopRobot,
-        clearActivities,
+
+        refreshRobot,
         refreshSensors,
+        refreshActivities,
+        clearActivities,
 
         setRobotName,
         setRobotId,
         setSpeedLimit,
         setObstacleDetection,
         setNotifications,
+
         saveSettings,
       }}
     >
@@ -284,7 +509,8 @@ export function RobotProvider({
 }
 
 export function useRobot() {
-  const context = useContext(RobotContext);
+  const context =
+    useContext(RobotContext);
 
   if (!context) {
     throw new Error(
