@@ -69,17 +69,28 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080D18] px-4 text-white">
-      <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-[#121B2E] p-8 shadow-xl">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">
-            RoboSphere
-          </h1>
+  <main
+  className="relative flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat px-4"
+  style={{
+    backgroundImage: "url('/login-bg.png')",
+  }}
+>
+  {/* Dark overlay */}
+  <div className="absolute inset-0 z-0 bg-black/40"></div>
 
-          <p className="mt-2 text-gray-400">
-            Create your account
-          </p>
-        </div>
+  {/* Register Box */}
+  <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/20 bg-[#0B1220]/90 p-8 shadow-2xl backdrop-blur-md">
+    
+    <h1 className="text-center text-3xl font-bold text-white">
+      RoboSphere
+    </h1>
+
+    <p className="mb-6 mt-2 text-center text-gray-400">
+      Create your account
+    </p>
+
+    {/* Keep your existing Name, Email, Password,
+        Register button and Login link here */}
 
         <form
           onSubmit={handleRegister}
